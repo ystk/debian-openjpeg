@@ -1,3 +1,12 @@
+openjpeg (1.3+dfsg-4+squeeze1) stable-security; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Fix cve-2012-3535: buffer overflow in JPEG2000 decoding (closes: #685970).
+  * Fix cve-2012-3358: another buffer overflow in JPEG2000 image file handling.
+    Fix cve-2009-5030: avoid memory overrun (Closes: #672455).
+
+ -- Michael Gilbert <mgilbert@debian.org>  Mon, 18 Feb 2013 18:55:32 +0000
+
 openjpeg (1.3+dfsg-4) unstable; urgency=high
 
   * Fix FTBFS on alpha for real (Closes: #483048).

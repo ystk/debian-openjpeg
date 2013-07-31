@@ -1,3 +1,6 @@
 30_fix_build_for_debian.dpatch
 31_use_system_tiff_headers.dpatch
 32_fix_FTBFS_on_alpha.dpatch
+33_avoid_memory_overrun.dpatch
+cve-2012-3358.dpatch
+cve-2012-3535.dpatch
