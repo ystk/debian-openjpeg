@@ -4,3 +4,24 @@
 33_avoid_memory_overrun.dpatch
 cve-2012-3358.dpatch
 cve-2012-3535.dpatch
+
+# CVE-2013-6052:
+shifting_too_much.dpatch
+# CVE-2013-6045:
+segfault0.dpatch
+segfault1.dpatch
+segfault2.dpatch
+segfault5.dpatch
+segfault7.dpatch
+# CVE-2013-6054:
+qcx_backport.dpatch
+# CVE-2013-1447:
+bloop1.dpatch
+bloop2.dpatch
+divbyzero.dpatch
+null-ptr-deref.dpatch
+segfault4.dpatch
+segfault6.dpatch
+segfault8.dpatch
+segfault10.dpatch
+uint_overflow.dpatch
