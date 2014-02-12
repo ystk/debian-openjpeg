@@ -5,6 +5,8 @@ include /usr/share/dpatch/dpatch.make
 # used as trailer in the generated manpages
 UVERSION = $(shell dpkg-parsechangelog | perl -ne 'print "$$1\n" if (/^Version: (.*?)(?:\.dfsg)?\-.*?$$/)')
 
+DEB_HOST_MULTIARCH = $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	EXTRA_CFLAGS += -O0
 else
@@ -59,7 +61,9 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) dist
+	$(MAKE) install DESTDIR=dist INSTALL_LIBDIR=\$${PREFIX}/lib/$(DEB_HOST_MULTIARCH)
+	cd dist/usr/lib/$(DEB_HOST_MULTIARCH) && ln -s libopenjpeg.so.2 libopenjpeg.so
+
 	# The libraries and header file are in dist/
 	# So we'll dump the binaries there too
 	cp codec/j2k_to_image codec/image_to_j2k dist/
@@ -80,6 +84,10 @@ binary-arch: build install
 	dh_gconf	
 	dh_link
 	dh_strip --dbg-package=libopenjpeg2-dbg
+
+	# remove arch-specific tools from debug package
+	rm -rf debian/libopenjpeg2-dbg/usr/lib/debug/usr/bin
+
 	dh_compress
 	dh_fixperms
 	dh_makeshlibs

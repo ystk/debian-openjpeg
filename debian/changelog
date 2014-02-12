@@ -1,3 +1,59 @@
+openjpeg (1.3+dfsg-4.7) wheezy-security; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Fix CVE-2013-6052: information leak.
+  * Fix CVE-2013-6045: multiple heap buffer overflows.
+  * Fix CVE-2013-6054: a heap buffer overflow.
+  * Fix CVE-2013-1447: multiple crashers.
+
+ -- Raphael Geissert <geissert@debian.org>  Sun, 01 Dec 2013 23:52:17 +0100
+
+openjpeg (1.3+dfsg-4.6) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Reduce debhelper dependency and debian/compat to 5
+    - Don't include openjpeg-tools binaries in the debug package since
+      those files are not multiarch co-installable at this compat level.
+  * Fix cve-2012-3535: buffer overflow in JPEG2000 decoding (closes: #685970).
+
+ -- Michael Gilbert <mgilbert@debian.org>  Wed, 19 Sep 2012 00:34:07 -0400
+
+openjpeg (1.3+dfsg-4.5) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Build-depend on debhelper >= 9 to ensure a multiarch-capable version is
+    installed (closes: #681722).
+
+ -- Michael Gilbert <mgilbert@debian.org>  Sun, 15 Jul 2012 18:40:53 -0400
+
+openjpeg (1.3+dfsg-4.4) unstable; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Fix cve-2012-3358: buffer overflow in JPEG2000 image file handling.
+
+ -- Michael Gilbert <mgilbert@debian.org>  Wed, 11 Jul 2012 14:51:21 -0400
+
+openjpeg (1.3+dfsg-4.3) unstable; urgency=low
+
+  * Non-maintainer upload with permission of the maintainer.
+  * Set debian/compat to 9 (closes: #680887).
+
+ -- Michael Gilbert <mgilbert@debian.org>  Tue, 10 Jul 2012 09:32:36 -0400
+
+openjpeg (1.3+dfsg-4.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Enable multiarch (closes: #675773).
+
+ -- Michael Gilbert <mgilbert@debian.org>  Mon, 02 Jul 2012 16:13:27 -0400
+
+openjpeg (1.3+dfsg-4.1) unstable; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Fix CVE-2009-5030: Avoid memory overrun (Closes: #672455).
+
+ -- Luk Claes <luk@debian.org>  Sat, 23 Jun 2012 18:26:27 +0200
+
 openjpeg (1.3+dfsg-4) unstable; urgency=high
 
   * Fix FTBFS on alpha for real (Closes: #483048).

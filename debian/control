@@ -3,7 +3,7 @@ Priority: extra
 Maintainer: Debian PhotoTools Maintainers <pkg-phototools-devel@lists.alioth.debian.org>
 Uploaders: Robin Cornelius <robin.cornelius@gmail.com>, Cyril Brulebois <kibi@debian.org>
 Homepage: http://www.openjpeg.org
-Build-Depends: debhelper (>= 5), dpatch (>= 2), libtiff4-dev
+Build-Depends: debhelper (>= 5), dpatch (>= 2), libtiff4-dev, dpkg-dev (>= 1.16.0)
 Standards-Version: 3.7.3
 Section: libs
 Vcs-Browser: http://git.debian.org/?p=pkg-phototools/openjpeg.git
@@ -23,6 +23,8 @@ Description: development files for libopenjpeg2, a JPEG 2000 image library
 Package: libopenjpeg2
 Section: libs
 Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}
 Description: JPEG 2000 image compression/decompression library
  Libopenjpeg2 is a library for handling the JPEG 2000 image compression format.
@@ -30,6 +32,7 @@ Description: JPEG 2000 image compression/decompression library
 Package: libopenjpeg2-dbg
 Section: libdevel
 Architecture: any
+Multi-Arch: same
 Depends: libopenjpeg2 (= ${binary:Version})
 Description: debug symbols for libopenjpeg2, a JPEG 2000 image library
  This package contains the debug symbols to match the runtime component of the
@@ -39,6 +42,7 @@ Description: debug symbols for libopenjpeg2, a JPEG 2000 image library
 Package: openjpeg-tools
 Section: graphics
 Architecture: any
+Multi-Arch: foreign
 Depends: ${shlibs:Depends}
 Description: command-line tools using the JPEG 2000 library
  This package provides with command-line tools allowing for conversions between
