@@ -1,29 +1,30 @@
-#!/bin/sh /usr/share/dpatch/dpatch-run
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## segfault1_fixed.dpatch by  <malat@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Previous segfault1.dpatch fixed a heap stack corruption, but introduced 
+## DP: a regression in openjpeg, which made legal (valid) JPEG2000 impossible 
+## DP: to decode. This patch properly fix the heap stack corruption while 
+## DP: preserving proper decoding.
+## DP: See https://bugs.debian.org/734238#53
 
 @DPATCH@
-Index: openjpeg-1.5.1/libopenjpeg/tcd.c
-===================================================================
---- openjpeg-1.5.1.orig/libopenjpeg/tcd.c	2012-09-13 09:58:39.000000000 +0000
-+++ openjpeg-1.5.1/libopenjpeg/tcd.c	2013-01-01 01:01:01.000000000 +0000
-@@ -1364,10 +1364,19 @@
- 	
- 	t1_time = opj_clock();	/* time needed to decode a tile */
- 	t1 = t1_create(tcd->cinfo);
-+	int comp0size = (tile->comps[0].x1 - tile->comps[0].x0) * (tile->comps[0].y1 - tile->comps[0].y0);
- 	for (compno = 0; compno < tile->numcomps; ++compno) {
- 		opj_tcd_tilecomp_t* tilec = &tile->comps[compno];
--		/* The +3 is headroom required by the vectorized DWT */
--		tilec->data = (int*) opj_aligned_malloc((((tilec->x1 - tilec->x0) * (tilec->y1 - tilec->y0))+3) * sizeof(int));
-+		int compcsize = ((tilec->x1 - tilec->x0) * (tilec->y1 - tilec->y0));
-+		/* Later-on it is assumed that all components are of at least comp0size blocks */
-+		if (compcsize < comp0size)
-+		{
-+			opj_event_msg(tcd->cinfo, EVT_ERROR, "Error decoding tile. Component %d contains only %d blocks "
-+				"while component 0 has %d blocks\n", compno, compcsize, comp0size);
-+			return false;
-+		}
-+		/* The +3 is headroom required by the vectorized DWT */
-+		tilec->data = (int*) opj_aligned_malloc((comp0size+3) * sizeof(int));
- 		t1_decode_cblks(t1, tilec, &tcd->tcp->tccps[compno]);
- 	}
- 	t1_destroy(t1);
+
+--- openjpeg-1.3+dfsg/libopenjpeg/tcd.c	2014-04-05 14:49:32.000000000 +0200
++++ openjpeg-1.3+dfsg/libopenjpeg/tcd.c	2014-04-05 14:40:25.000000000 +0200
+@@ -1407,6 +1407,15 @@
+ 
+ 	if (tcd->tcp->mct) {
+ 		int n = (tile->comps[0].x1 - tile->comps[0].x0) * (tile->comps[0].y1 - tile->comps[0].y0);
++
++      /* testcase 1336.pdf.asan.47.376 */
++      if ((tile->comps[0].x1 - tile->comps[0].x0) * (tile->comps[0].y1 - tile->comps[0].y0) < n ||
++        (  tile->comps[1].x1 - tile->comps[1].x0) * (tile->comps[1].y1 - tile->comps[1].y0) < n ||
++        (  tile->comps[2].x1 - tile->comps[2].x0) * (tile->comps[2].y1 - tile->comps[2].y0) < n) {
++        opj_event_msg(tcd->cinfo, EVT_ERROR, "Tiles don't all have the same dimension. Skip the MCT step.\n");
++        return false;
++      }
++
+ 		if (tcd->tcp->tccps[0].qmfbid == 1) {
+ 			mct_decode(
+ 					tile->comps[0].data,
