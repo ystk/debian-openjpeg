@@ -1,58 +1,116 @@
-openjpeg (1.3+dfsg-4.7) wheezy-security; urgency=high
+openjpeg (1.5.2-2) unstable; urgency=low
 
-  * Non-maintainer upload by the Security Team.
-  * Fix CVE-2013-6052: information leak.
-  * Fix CVE-2013-6045: multiple heap buffer overflows.
-  * Fix CVE-2013-6054: a heap buffer overflow.
-  * Fix CVE-2013-1447: multiple crashers.
+  * Remove patch applied upstream already
+    - d/p/fixjnisoname.patch
+  * Really fix java compilation. Closes: #741915
+  * Use system installed getopt. Closes: #716594
+  * Update d/copyright. Closes: #697806
 
- -- Raphael Geissert <geissert@debian.org>  Sun, 01 Dec 2013 23:52:17 +0100
+ -- Mathieu Malaterre <malat@debian.org>  Tue, 01 Apr 2014 13:38:56 +0000
 
-openjpeg (1.3+dfsg-4.6) unstable; urgency=low
+openjpeg (1.5.2-1) unstable; urgency=low
 
-  * Non-maintainer upload.
-  * Reduce debhelper dependency and debian/compat to 5
-    - Don't include openjpeg-tools binaries in the debug package since
-      those files are not multiarch co-installable at this compat level.
-  * Fix cve-2012-3535: buffer overflow in JPEG2000 decoding (closes: #685970).
+  * New upstream.
+    Closes: #731237, #697806, #716594, #716595, #741915, #741974, #741916
+  * Update watch file to now point to sf.net mirror
 
- -- Michael Gilbert <mgilbert@debian.org>  Wed, 19 Sep 2012 00:34:07 -0400
+ -- Mathieu Malaterre <malat@debian.org>  Thu, 27 Mar 2014 20:19:41 +0100
 
-openjpeg (1.3+dfsg-4.5) unstable; urgency=low
+openjpeg (1.5.1-3) unstable; urgency=low
 
-  * Non-maintainer upload.
-  * Build-depend on debhelper >= 9 to ensure a multiarch-capable version is
-    installed (closes: #681722).
+  * Fix cmake monolithic export.
+  * Prefer build type of None
+  * B-D on libtiff-dev. Closes: #736034
 
- -- Michael Gilbert <mgilbert@debian.org>  Sun, 15 Jul 2012 18:40:53 -0400
+ -- Mathieu Malaterre <malat@debian.org>  Mon, 17 Mar 2014 18:45:54 +0100
 
-openjpeg (1.3+dfsg-4.4) unstable; urgency=high
+openjpeg (1.5.1-2) unstable; urgency=low
 
-  * Non-maintainer upload by the Security Team.
-  * Fix cve-2012-3358: buffer overflow in JPEG2000 image file handling.
+  * Upload to sid
+  * Import patch from upstream to prevent regression from 1.5.0:
+    d/p/issue205.patch
 
- -- Michael Gilbert <mgilbert@debian.org>  Wed, 11 Jul 2012 14:51:21 -0400
+ -- Mathieu Malaterre <malat@debian.org>  Mon, 17 Mar 2014 09:28:46 +0100
 
-openjpeg (1.3+dfsg-4.3) unstable; urgency=low
+openjpeg (1.5.1-1) experimental; urgency=low
 
-  * Non-maintainer upload with permission of the maintainer.
-  * Set debian/compat to 9 (closes: #680887).
+  * New upstream. Closes: #687528, #681458, #691156
+  * Fix java binding installation
+    - fixjniinstall.patch
+  * Fix SONAME hack in d/rules, prefer cmake solution
+    - fixjnisoname.patch
+  * Remove patch applied upstream:
+    - addmathlib.patch
+    - fixsoname.patch
+    - relativeincludepath.patch
+    - installjava.patch
+    - addxml2.patch
+    - manpagetypo.patch
 
- -- Michael Gilbert <mgilbert@debian.org>  Tue, 10 Jul 2012 09:32:36 -0400
+ -- Mathieu Malaterre <malat@debian.org>  Mon, 22 Oct 2012 12:51:26 +0200
 
-openjpeg (1.3+dfsg-4.2) unstable; urgency=low
+openjpeg (1.5.0-3) experimental; urgency=low
 
-  * Non-maintainer upload.
-  * Enable multiarch (closes: #675773).
+  * Add missing jp2-thumbnailer
+  * Mark packages with Multi-Arch: same/foreign
 
- -- Michael Gilbert <mgilbert@debian.org>  Mon, 02 Jul 2012 16:13:27 -0400
+ -- Mathieu Malaterre <malat@debian.org>  Tue, 19 Jun 2012 16:46:59 +0200
 
-openjpeg (1.3+dfsg-4.1) unstable; urgency=high
+openjpeg (1.5.0-2) experimental; urgency=low
 
-  * Non-maintainer upload by the Security Team.
-  * Fix CVE-2009-5030: Avoid memory overrun (Closes: #672455).
+  * Adding libopenjpeg-java. Closes: #510443
+  * Update d/control so that it is easier to backport to stable
+  * Provide a fix for cmake commit a2be068c
+  * Provide a symlinks openjpeg.h -> openjpeg-1.5/openjpeg.h for easier
+    transition
+  * Add openjpip-server package: openjpip-server
+   - Add init script
+   - Fix default location of tempfile to be in /tmp
+  * Add openjpip java based clients packages:
+   - openjpip-viewer
+   - openjpip-viewer-xerces
 
- -- Luk Claes <luk@debian.org>  Sat, 23 Jun 2012 18:26:27 +0200
+ -- Mathieu Malaterre <malat@debian.org>  Fri, 20 Apr 2012 11:45:07 +0200
+
+openjpeg (1.5.0-1) experimental; urgency=low
+
+  [ Robin Cornelius ]
+  * Include motion j2k codec in build
+    - Implement man pages for the mj2 tools
+    - Use clean target of mj2/Makefile when running the debian/rules clean
+      target
+    - Update build patch, to set gcc options for mj2 Makefile based on the
+      settings in debian/rules
+  * Add ${misc:Depends} to binary packages
+  * Place -dbg package in section debug
+
+  [ David Paleino ]
+  * New upstream version (Closes: #659226)
+    - fix alpha channel encode by preventing an overrun in the static MCT
+      tables when processing more than 3 color components. (Closes: #541807)
+  * Package moved to "3.0 (quilt)" source format
+  * Patches converted from dpatch to quilt-format
+  * Dropped unapplicable patches with the new sources
+  * Updated debian/copyright (missing bits and DEP-5)
+  * Added README.source explaining the reason for repacking the tarball
+  * Removed obsolete README.Debian
+  * Bumped Standards-Version to 3.9.3
+  * Dropped debian/image_to_j2k.pod and j2k_to_image.pod, upstream has
+    proper manpages now
+  * Updated Build-Dependencies and various small things in d/control
+
+  [ Mathieu Malaterre ]
+  * Add myself to uploaders
+  * Switch to cmake buildsystem
+  * Update orig-tar.sh to remove thirdparty/* files
+  * Bump SONAME to 5 as per upstream recommendation
+  * Install JPWL libraries (update *.symbols file)
+  * Import two patches from upstream svn:
+   - Add explicit link to math lib (-lm)
+   - Fix SONAME handling in 1.5.0 (import from 1.5 branch)
+  * Switch to dh(9), make multi-arch. Closes: #663045
+
+ -- Mathieu Malaterre <malat@debian.org>  Mon, 16 Apr 2012 16:01:13 +0200
 
 openjpeg (1.3+dfsg-4) unstable; urgency=high
 

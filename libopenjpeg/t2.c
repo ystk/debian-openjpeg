@@ -30,6 +30,7 @@
  */
 
 #include "opj_includes.h"
+#include <assert.h>
 
 /** @defgroup T2 T2 - Implementation of a tier-2 coding */
 /*@{*/
@@ -59,11 +60,12 @@ Encode a packet of a tile to a destination buffer
 */
 static int t2_encode_packet(opj_tcd_tile_t *tile, opj_tcp_t *tcp, opj_pi_iterator_t *pi, unsigned char *dest, int len, opj_codestream_info_t *cstr_info, int tileno);
 /**
-@param seg
+@param cblk
+@param index
 @param cblksty
 @param first
 */
-static void t2_init_seg(opj_tcd_cblk_dec_t* cblk, int index, int cblksty, int first);
+static opj_bool t2_init_seg(opj_tcd_cblk_dec_t* cblk, int index, int cblksty, int first);
 /**
 Decode a packet of a tile from a source buffer
 @param t2 T2 handle
@@ -72,6 +74,7 @@ Decode a packet of a tile from a source buffer
 @param tile Tile for which to write the packets
 @param tcp Tile coding parameters
 @param pi Packet identity
+@param pack_info Packet information
 @return 
 */
 static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_tile_t *tile, 
@@ -147,8 +150,8 @@ static int t2_encode_packet(opj_tcd_tile_t * tile, opj_tcp_t * tcp, opj_pi_itera
 		c[1] = 145;
 		c[2] = 0;
 		c[3] = 4;
-		c[4] = (tile->packno % 65536) / 256;
-		c[5] = (tile->packno % 65536) % 256;
+		c[4] = (unsigned char)((tile->packno % 65536) / 256);
+		c[5] = (unsigned char)((tile->packno % 65536) % 256);
 		c += 6;
 	}
 	/* </SOP> */
@@ -253,8 +256,8 @@ static int t2_encode_packet(opj_tcd_tile_t * tile, opj_tcp_t * tcp, opj_pi_itera
 	/* </EPH> */
 
 	/* << INDEX */
-	// End of packet header position. Currently only represents the distance to start of packet
-	// Will be updated later by incrementing with packet start value
+	/* End of packet header position. Currently only represents the distance to start of packet
+	// Will be updated later by incrementing with packet start value */
 	if(cstr_info && cstr_info->index_write) {
 		opj_packet_info_t *info_PK = &cstr_info->tile[tileno].packet[cstr_info->packno];
 		info_PK->end_ph_pos = (int)(c - dest);
@@ -294,9 +297,17 @@ static int t2_encode_packet(opj_tcd_tile_t * tile, opj_tcp_t * tcp, opj_pi_itera
 	return (c - dest);
 }
 
-static void t2_init_seg(opj_tcd_cblk_dec_t* cblk, int index, int cblksty, int first) {
+static opj_bool t2_init_seg(opj_tcd_cblk_dec_t* cblk, int index, int cblksty, int first) {
 	opj_tcd_seg_t* seg;
-	cblk->segs = (opj_tcd_seg_t*) opj_realloc(cblk->segs, (index + 1) * sizeof(opj_tcd_seg_t));
+    opj_tcd_seg_t* segs;
+    segs = (opj_tcd_seg_t*) opj_realloc(cblk->segs, (index + 1) * sizeof(opj_tcd_seg_t));
+
+    if (segs == NULL)
+    {
+        return OPJ_FALSE;
+    }
+    cblk->segs = segs;
+
 	seg = &cblk->segs[index];
 	seg->data = NULL;
 	seg->dataindex = 0;
@@ -314,6 +325,8 @@ static void t2_init_seg(opj_tcd_cblk_dec_t* cblk, int index, int cblksty, int fi
 	} else {
 		seg->maxpasses = 109;
 	}
+
+    return OPJ_TRUE;
 }
 
 static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_tile_t *tile, 
@@ -328,13 +341,15 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 	int precno = pi->precno;	/* precinct value */
 	int layno  = pi->layno;		/* quality layer value */
 
-	opj_tcd_resolution_t* res = &tile->comps[compno].resolutions[resno];
-
 	unsigned char *hd = NULL;
 	int present;
 	
 	opj_bio_t *bio = NULL;	/* BIO component */
-	
+
+	opj_tcd_resolution_t* res;
+	assert(&tile->comps[compno] != NULL);
+	res = &tile->comps[compno].resolutions[resno];
+
 	if (layno == 0) {
 		for (bandno = 0; bandno < res->numbands; bandno++) {
 			opj_tcd_band_t *band = &res->bands[bandno];
@@ -401,8 +416,8 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 		}
 
 		/* << INDEX */
-		// End of packet header position. Currently only represents the distance to start of packet
-		// Will be updated later by incrementing with packet start value
+		/* End of packet header position. Currently only represents the distance to start of packet
+		// Will be updated later by incrementing with packet start value*/
 		if(pack_info) {
 			pack_info->end_ph_pos = (int)(c - src);
 		}
@@ -460,12 +475,22 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 			cblk->numlenbits += increment;
 			segno = 0;
 			if (!cblk->numsegs) {
-				t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 1);
+                if (!t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 1))
+                {
+                    opj_event_msg(t2->cinfo, EVT_ERROR, "Out of memory\n");
+                    bio_destroy(bio);
+                    return -999;
+                }
 			} else {
 				segno = cblk->numsegs - 1;
 				if (cblk->segs[segno].numpasses == cblk->segs[segno].maxpasses) {
 					++segno;
-					t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 0);
+                    if (!t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 0))
+                    {
+                        opj_event_msg(t2->cinfo, EVT_ERROR, "Out of memory\n");
+                        bio_destroy(bio);
+                        return -999;
+                    }
 				}
 			}
 			n = cblk->numnewpasses;
@@ -476,7 +501,12 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 				n -= cblk->segs[segno].numnewpasses;
 				if (n > 0) {
 					++segno;
-					t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 0);
+                    if (!t2_init_seg(cblk, segno, tcp->tccps[compno].cblksty, 0))
+                    {
+                        opj_event_msg(t2->cinfo, EVT_ERROR, "Out of memory\n");
+                        bio_destroy(bio);
+                        return -999;
+                    }
 				}
 			} while (n > 0);
 		}
@@ -494,14 +524,15 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 	if (tcp->csty & J2K_CP_CSTY_EPH) {
 		if ((*hd) != 0xff || (*(hd + 1) != 0x92)) {
 			opj_event_msg(t2->cinfo, EVT_ERROR, "Expected EPH marker\n");
+			return -999;
 		} else {
 			hd += 2;
 		}
 	}
 
 	/* << INDEX */
-	// End of packet header position. Currently only represents the distance to start of packet
-	// Will be updated later by incrementing with packet start value
+	/* End of packet header position. Currently only represents the distance to start of packet
+	// Will be updated later by incrementing with packet start value*/
 	if(pack_info) {
 		pack_info->end_ph_pos = (int)(hd - src);
 	}
@@ -565,7 +596,7 @@ static int t2_decode_packet(opj_t2_t* t2, unsigned char *src, int len, opj_tcd_t
 
 #endif /* USE_JPWL */
 				
-				cblk->data = (unsigned char*) opj_realloc(cblk->data, (cblk->len + seg->newlen) * sizeof(unsigned char*));
+				cblk->data = (unsigned char*) opj_realloc(cblk->data, (cblk->len + seg->newlen) * sizeof(unsigned char));
 				memcpy(cblk->data + cblk->len, c, seg->newlen);
 				if (seg->numpasses == 0) {
 					seg->data = &cblk->data;
@@ -614,6 +645,7 @@ int t2_encode_packets(opj_t2_t* t2,int tileno, opj_tcd_tile_t *tile, int maxlaye
 				int tpnum = compno;
 				if (pi_create_encode(pi, cp,tileno,poc,tpnum,tppos,t2_mode,cur_totnum_tp)) {
 					opj_event_msg(t2->cinfo, EVT_ERROR, "Error initializing Packet Iterator\n");
+					pi_destroy(pi, cp, tileno);
 					return -999;
 				}
 				while (pi_next(&pi[poc])) {
@@ -658,8 +690,8 @@ int t2_encode_packets(opj_t2_t* t2,int tileno, opj_tcd_tile_t *tile, int maxlaye
 							info_PK->start_pos = ((cp->tp_on | tcp->POC)&& info_PK->start_pos) ? info_PK->start_pos : info_TL->packet[cstr_info->packno - 1].end_pos + 1;
 						}
 						info_PK->end_pos = info_PK->start_pos + e - 1;
-						info_PK->end_ph_pos += info_PK->start_pos - 1;	// End of packet header which now only represents the distance 
-																														// to start of packet is incremented by value of start of packet
+						info_PK->end_ph_pos += info_PK->start_pos - 1;	/* End of packet header which now only represents the distance 
+																														// to start of packet is incremented by value of start of packet*/
 					}
 					
 					cstr_info->packno++;
@@ -710,7 +742,11 @@ int t2_decode_packets(opj_t2_t *t2, unsigned char *src, int len, int tileno, opj
 			} else {
 				e = 0;
 			}
-			
+            if(e == -999)
+            {
+                pi_destroy(pi, cp, tileno);
+                return -999;
+            }
 			/* progression in resolution */
 			image->comps[pi[pino].compno].resno_decoded =	
 				(e > 0) ? 
@@ -724,8 +760,9 @@ int t2_decode_packets(opj_t2_t *t2, unsigned char *src, int len, int tileno, opj
 				opj_packet_info_t *info_PK = &info_TL->packet[cstr_info->packno];
 				if (!cstr_info->packno) {
 					info_PK->start_pos = info_TL->end_header + 1;
-				} else if (info_TL->packet[cstr_info->packno-1].end_pos >= (int)cstr_info->tile[tileno].tp[curtp].tp_end_pos){ // New tile part
-					info_TL->tp[curtp].tp_numpacks = cstr_info->packno - tp_start_packno; // Number of packets in previous tile-part
+				} else if (info_TL->packet[cstr_info->packno-1].end_pos >= (int)cstr_info->tile[tileno].tp[curtp].tp_end_pos){ /* New tile part*/
+					info_TL->tp[curtp].tp_numpacks = cstr_info->packno - tp_start_packno; /* Number of packets in previous tile-part*/
+          info_TL->tp[curtp].tp_start_pack = tp_start_packno;
 					tp_start_packno = cstr_info->packno;
 					curtp++;
 					info_PK->start_pos = cstr_info->tile[tileno].tp[curtp].tp_end_header+1;
@@ -733,8 +770,8 @@ int t2_decode_packets(opj_t2_t *t2, unsigned char *src, int len, int tileno, opj
 					info_PK->start_pos = (cp->tp_on && info_PK->start_pos) ? info_PK->start_pos : info_TL->packet[cstr_info->packno - 1].end_pos + 1;
 				}
 				info_PK->end_pos = info_PK->start_pos + e - 1;
-				info_PK->end_ph_pos += info_PK->start_pos - 1;	// End of packet header which now only represents the distance 
-																												// to start of packet is incremented by value of start of packet
+				info_PK->end_ph_pos += info_PK->start_pos - 1;	/* End of packet header which now only represents the distance 
+																												// to start of packet is incremented by value of start of packet*/
 				cstr_info->packno++;
 			}
 			/* << INDEX */
@@ -748,7 +785,8 @@ int t2_decode_packets(opj_t2_t *t2, unsigned char *src, int len, int tileno, opj
 	}
 	/* INDEX >> */
 	if(cstr_info) {
-		cstr_info->tile[tileno].tp[curtp].tp_numpacks = cstr_info->packno - tp_start_packno; // Number of packets in last tile-part
+		cstr_info->tile[tileno].tp[curtp].tp_numpacks = cstr_info->packno - tp_start_packno; /* Number of packets in last tile-part*/
+    cstr_info->tile[tileno].tp[curtp].tp_start_pack = tp_start_packno;
 	}
 	/* << INDEX */
 

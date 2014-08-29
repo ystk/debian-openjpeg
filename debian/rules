@@ -1,103 +1,54 @@
 #!/usr/bin/make -f
+# -*- makefile -*-
 
-include /usr/share/dpatch/dpatch.make
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
 
-# used as trailer in the generated manpages
-UVERSION = $(shell dpkg-parsechangelog | perl -ne 'print "$$1\n" if (/^Version: (.*?)(?:\.dfsg)?\-.*?$$/)')
+CURVER := $(shell dpkg-parsechangelog | grep ^Version | awk '{print $$2}' | cut -d- -f1 | cut -d+ -f1)
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+JAVA_HOME=/usr/lib/jvm/default-java
 
-DEB_HOST_MULTIARCH = $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+%:
+	dh $@ --buildsystem=cmake --parallel --with javahelper
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	EXTRA_CFLAGS += -O0
-else
-	# Upstream default optimisation level
-	EXTRA_CFLAGS += -O3
-endif
+CMAKE_EXTRA_FLAGS += -DCMAKE_SKIP_RPATH=ON \
+	-DCMAKE_BUILD_TYPE:STRING=None \
+	-DOPENJPEG_INSTALL_LIB_DIR:STRING=lib/$(DEB_HOST_MULTIARCH) \
+	-DOPENJPEG_INSTALL_JNI_DIR:STRING=lib/$(DEB_HOST_MULTIARCH)/jni \
+	-DBUILD_CODEC:BOOL=ON \
+	-DBUILD_JPIP:BOOL=ON \
+	-DBUILD_JPIP_SERVER:BOOL=ON \
+	-DBUILD_JPWL:BOOL=ON \
+	-DBUILD_JAVA:BOOL=ON \
+	-DBUILD_MJ2:BOOL=ON \
+	-DBUILD_SHARED_LIBS:BOOL=ON \
+	-DUSE_SYSTEM_GETOPT:BOOL=ON \
+	-DBUILD_TESTING:BOOL=OFF \
+	-DBUILD_THIRDPARTY:BOOL=OFF
 
-build: build-stamp
-build-stamp: patch
-	dh_testdir
+override_dh_auto_configure:
+	dh_auto_configure -- $(CMAKE_EXTRA_FLAGS)
 
-	# build all library targets
-	$(MAKE) OpenJPEG
-	$(MAKE) -C codec
-	$(MAKE) -C indexer_JPIP
+override_dh_strip:
+	dh_strip --dbg-package=libopenjpeg5-dbg
 
-	# build manpages
-	for i in debian/*.pod; do \
-		pod2man --center 'OPENJPEG TOOLS' \
-			--release $(UVERSION) \
-			$$i $${i%%.pod}.1 ; \
-	done
+override_dh_install:
+	dh_install --list-missing
 
-	touch $@
+override_dh_installinit:
+	dh_installinit -popenjpip-server --name=openjpip
 
-clean: realclean unpatch
-realclean:
-	dh_testdir
-	dh_testroot
+# http://cmake.org/gitweb?p=cmake.git;a=commitdiff;h=a2be068c
+override_dh_auto_install:
+	sed -i -e "s/FATAL_ERROR/STATUS/g" ./obj-*/CMakeFiles/Export/lib/*/openjpeg-1.5/OpenJPEGTargets-none.cmake
+	sed -i -e "s/FATAL_ERROR/STATUS/g" ./obj-*/CMakeFiles/Export/lib/*/openjpeg-1.5/OpenJPEGTargets.cmake
+	dh_auto_install
 
-	# Remove execute permission since upstreams ships all files with +x
-	chmod -R a-x .
-	chmod -R a+X .
-	chmod a+x debian/rules
+get-orig-source:
+	uscan --verbose --rename \
+		--force-download \
+		--download-version $(CURVER)
 
-	[ ! -f  codec/*.o ] || $(MAKE) -C codec clean
-	[ ! -f  indexer_JPIP/*.o ] || $(MAKE) -C indexer_JPIP clean
-
-	$(MAKE) clean
-
-	# delete the manpages which were built from perlpod (not using *.1,
-	# in case a later file is added and not checked in)
-	for i in debian/*.pod; do \
-		rm -f $${i%%.pod}.1; \
-	done
-
-	dh_clean indexer_JPIP/index_create codec/image_to_j2k codec/j2k_to_image libopenjpeg.a.nopic libopenjpeg.so build-stamp
-
-install: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
-
-	$(MAKE) install DESTDIR=dist INSTALL_LIBDIR=\$${PREFIX}/lib/$(DEB_HOST_MULTIARCH)
-	cd dist/usr/lib/$(DEB_HOST_MULTIARCH) && ln -s libopenjpeg.so.2 libopenjpeg.so
-
-	# The libraries and header file are in dist/
-	# So we'll dump the binaries there too
-	cp codec/j2k_to_image codec/image_to_j2k dist/
-	cp indexer_JPIP/index_create dist/
-	cp debian/jp2-thumbnailer dist/
-
-binary-indep: build install
-# We have nothing to do by default.
-
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installchangelogs ChangeLog
-	dh_installdocs
-	dh_installexamples
-	dh_install --sourcedir=dist/
-	dh_installman
-	dh_gconf	
-	dh_link
-	dh_strip --dbg-package=libopenjpeg2-dbg
-
-	# remove arch-specific tools from debug package
-	rm -rf debian/libopenjpeg2-dbg/usr/lib/debug/usr/bin
-
-	dh_compress
-	dh_fixperms
-	dh_makeshlibs
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep binary-arch
-
-.PHONY: build clean realclean binary-indep binary-arch binary install
-.SUFFIXES: .1 .help
+.PHONY: override_dh_auto_configure \
+	override_dh_strip \
+	get-orig-source

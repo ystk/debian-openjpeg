@@ -1,27 +1,32 @@
 INCLUDE_REGULAR_EXPRESSION("^.*$")
 # Defines the source code for the library
 SET(OPENJPEG_SRCS
-  bio.c
-  cio.c
-  dwt.c
-  event.c
-  image.c
-  j2k.c
-  j2k_lib.c
-  jp2.c
-  jpt.c
-  mct.c
-  mqc.c
-  openjpeg.c
-  pi.c
-  raw.c
-  t1.c
-  t2.c
-  tcd.c
-  tgt.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/bio.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/cio.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/dwt.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/event.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/image.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/j2k.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/j2k_lib.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/jp2.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/jpt.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mct.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/mqc.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/openjpeg.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/pi.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/raw.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/t1.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/t2.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/tcd.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/tgt.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/cidx_manager.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/phix_manager.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ppix_manager.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/thix_manager.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/tpix_manager.c
 )
 
-# Pass proper definition to preprocessor to generate shared lib
+# Build the library
 IF(WIN32)
   IF(BUILD_SHARED_LIBS)
     ADD_DEFINITIONS(-DOPJ_EXPORTS)
@@ -29,16 +34,38 @@ IF(WIN32)
     ADD_DEFINITIONS(-DOPJ_STATIC)
   ENDIF(BUILD_SHARED_LIBS)
 ENDIF(WIN32)
-
-# Create the library
 ADD_LIBRARY(${OPENJPEG_LIBRARY_NAME} ${OPENJPEG_SRCS})
-SET_TARGET_PROPERTIES(${OPENJPEG_LIBRARY_NAME} PROPERTIES
-	${OPENJPEG_LIBRARY_PROPERTIES})
+IF(UNIX)
+  TARGET_LINK_LIBRARIES(${OPENJPEG_LIBRARY_NAME} m)
+ENDIF(UNIX)
+SET_TARGET_PROPERTIES(${OPENJPEG_LIBRARY_NAME} PROPERTIES ${OPENJPEG_LIBRARY_PROPERTIES})
+
+# Build the JPWL library ?
+IF(BUILD_JPWL)
+ ADD_SUBDIRECTORY(jpwl)
+ENDIF(BUILD_JPWL)
 
 # Install library
 INSTALL(TARGETS ${OPENJPEG_LIBRARY_NAME}
-	DESTINATION lib)
+  EXPORT OpenJPEGTargets
+  RUNTIME DESTINATION ${OPENJPEG_INSTALL_BIN_DIR} COMPONENT Applications
+  LIBRARY DESTINATION ${OPENJPEG_INSTALL_LIB_DIR} COMPONENT Libraries
+  ARCHIVE DESTINATION ${OPENJPEG_INSTALL_LIB_DIR} COMPONENT Libraries
+)
 
 # Install includes files
 INSTALL(FILES openjpeg.h
-	DESTINATION ${INCLUDE_INSTALL_DIR}/openjpeg)
+  DESTINATION ${OPENJPEG_INSTALL_INCLUDE_DIR} COMPONENT Headers
+)
+
+# install man page of the library
+INSTALL(
+  FILES       ${OPENJPEG_SOURCE_DIR}/doc/man/man3/libopenjpeg.3
+  DESTINATION ${OPENJPEG_INSTALL_MAN_DIR}/man3)
+
+# internal utilities to generate t1_luts.h
+# no need to install:
+ADD_EXECUTABLE(t1_generate_luts t1_generate_luts.c)
+IF(UNIX)
+  TARGET_LINK_LIBRARIES(t1_generate_luts m)
+ENDIF()
