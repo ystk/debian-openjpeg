@@ -1,3 +1,9 @@
+openjpeg (1:1.5.2-3) unstable; urgency=medium
+
+  * epoch upload to resolve #760874 completely
+
+ -- Mathieu Malaterre <malat@debian.org>  Sat, 04 Oct 2014 13:51:19 +0200
+
 openjpeg (1.5.2-2) unstable; urgency=low
 
   * Remove patch applied upstream already
